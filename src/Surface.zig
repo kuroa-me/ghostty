@@ -147,6 +147,11 @@ child_exited: bool = false,
 /// to let us know.
 focused: bool = true,
 
+/// Broadcast domain for this surface. When non-zero, indicates this surface
+/// participates in broadcast and will exchange input with other surfaces in
+/// the same domain. A value of 0 means broadcasting is disabled.
+broadcast_domain: u64 = 0,
+
 /// Used to determine whether to continuously scroll.
 selection_scroll_active: bool = false,
 
@@ -827,6 +832,22 @@ pub fn deinit(self: *Surface) void {
 /// close process, which should ultimately deinitialize this surface.
 pub fn close(self: *Surface) void {
     self.rt_surface.close(self.needsConfirmQuit());
+}
+
+/// Set the broadcast domain for this surface.
+/// A non-zero domain enables broadcasting; 0 disables it.
+pub fn setBroadcastDomain(self: *Surface, domain: u64) void {
+    self.broadcast_domain = domain;
+    log.debug("surface addr={x} broadcast_domain={}", .{
+        @intFromPtr(self),
+        self.broadcast_domain,
+    });
+}
+
+/// Get the broadcast domain for this surface.
+/// Returns 0 if broadcasting is disabled, non-zero domain ID if enabled.
+pub fn getBroadcastDomain(self: *Surface) u64 {
+    return self.broadcast_domain;
 }
 
 /// Returns a mailbox that can be used to send messages to this surface.
@@ -2768,6 +2789,22 @@ pub fn keyCallback(
             .stable => |v| .{ .write_stable = v },
             .alloc => |v| .{ .write_alloc = v },
         }, .unlocked);
+
+        // Broadcast our key to other sufaces in the broadcast group.
+        if (self.broadcast_domain != 0) {
+            for (self.app.surfaces.items) |rt_other| {
+                const other = rt_other.core();
+                if (other == self) continue;
+                if (other.broadcast_domain == 0) continue;
+                if (other.broadcast_domain != self.broadcast_domain) continue;
+
+                other.queueIo(switch (write_req) {
+                    .small => |v| .{ .write_small = v },
+                    .stable => |v| .{ .write_stable = v },
+                    .alloc => |v| .{ .write_alloc = v },
+                }, .unlocked);
+            }
+        }
     } else {
         // No valid request means that we didn't encode anything.
         return .ignored;
@@ -4974,6 +5011,12 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
                 {},
             ),
 
+            // .broadcast_input => |mode| {
+            // switch(mode) {
+            //     .disable => try self.rt_app.performAction(
+            //         .{ .surface = self },
+            // },
+
             else => try self.app.performAction(
                 self.rt_app,
                 action.scoped(.app).?,
@@ -5598,6 +5641,17 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
             self.config.mouse_reporting = !self.config.mouse_reporting;
             log.debug("mouse reporting toggled: {}", .{self.config.mouse_reporting});
         },
+
+        .broadcast_input => |mode| return try self.rt_app.performAction(
+            .{ .surface = self },
+            .broadcast_input,
+            switch (mode) {
+                .disable => .disable,
+                .all_tabs => .all_tabs,
+                .current_tab => .current_tab,
+                .toggle => .toggle,
+            },
+        ),
 
         .toggle_command_palette => return try self.rt_app.performAction(
             .{ .surface = self },

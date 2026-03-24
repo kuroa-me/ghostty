@@ -666,6 +666,10 @@ extension Ghostty {
                 return false
             case GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD:
                 return copyTitleToClipboard(app, target: target)
+
+            case GHOSTTY_ACTION_BROADCAST_INPUT:
+                return broadcastInput(app, target: target, mode: action.action.broadcast_input)
+
             default:
                 Ghostty.logger.warning("unknown action action=\(action.tag.rawValue)")
                 return false
@@ -1649,6 +1653,95 @@ extension Ghostty {
             default:
                 return false
             }
+        }
+
+        private static func broadcastInput(
+            _ app: ghostty_app_t,
+            target: ghostty_target_s,
+            mode: ghostty_action_broadcast_input_e
+        ) -> Bool {
+            switch target.tag {
+            case GHOSTTY_TARGET_APP:
+                Ghostty.logger.warning("broadcast input does nothing with an app target")
+                return false
+
+            case GHOSTTY_TARGET_SURFACE:
+                guard let surface = target.target.surface else { return false }
+                guard let surfaceView = self.surfaceView(from: surface) else { return false }
+
+                let currentTabSurfaces = surfaceViews(for: surfaceView, scope: false)
+                let allTabSurfaces = surfaceViews(for: surfaceView, scope: true)
+
+                switch mode {
+                case GHOSTTY_BROADCAST_INPUT_DISABLE:
+                    setBroadcast(enabled: false, for: allTabSurfaces)
+                    return true
+
+                case GHOSTTY_BROADCAST_INPUT_ALL_TABS:
+                    let enabled = allTabSurfaces.allSatisfy { ghostty_surface_get_broadcast_domain($0.surface!) != 0 }
+                    setBroadcast(enabled: !enabled, for: allTabSurfaces)
+                    return true
+
+                case GHOSTTY_BROADCAST_INPUT_CURRENT_TAB:
+                    let enabled = currentTabSurfaces.allSatisfy { ghostty_surface_get_broadcast_domain($0.surface!) != 0 }
+                    setBroadcast(enabled: !enabled, for: currentTabSurfaces)
+                    return true
+
+                case GHOSTTY_BROADCAST_INPUT_TOGGLE:
+                    let enabled = ghostty_surface_get_broadcast_domain(surfaceView.surface!) != 0
+                    setBroadcast(enabled: !enabled, for: [surfaceView])
+                    return true
+
+                default:
+                    assertionFailure()
+                    return false
+                }
+
+            default:
+                assertionFailure()
+                return false
+            }
+        }
+
+        private static func surfaceViews(for surfaceView: SurfaceView, scope: Bool) -> [SurfaceView] {
+            guard let controller = surfaceView.window?.windowController as? BaseTerminalController else {
+                return [surfaceView]
+            }
+
+            let tabSurfaces = Array(controller.surfaceTree)
+            
+            // If scope is true, return all tab group surfaces; otherwise return just this tab
+            guard scope, let window = surfaceView.window, let tabGroup = window.tabGroup else {
+                return tabSurfaces
+            }
+
+            return tabGroup.windows.compactMap {
+                $0.windowController as? BaseTerminalController
+            }.flatMap {
+                Array($0.surfaceTree)
+            }
+        }
+
+        private static func setBroadcast(enabled: Bool, for surfaces: [SurfaceView]) {
+            for surfaceView in surfaces {
+                guard let surface = surfaceView.surface else { continue }
+                let domain = enabled ? broadcastDomainValue(for: surfaceView) : 0
+                ghostty_surface_set_broadcast_domain(surface, domain)
+                NotificationCenter.default.post(
+                    name: .ghosttyDidChangeBroadcasting,
+                    object: surfaceView,
+                    userInfo: [
+                        SwiftUI.Notification.Name.BroadcastingKey: domain != 0,
+                    ]
+                )
+            }
+        }
+
+        private static func broadcastDomainValue(for surfaceView: SurfaceView) -> UInt64 {
+            // All surfaces in the same window share the same broadcast domain
+            guard let window = NSApp.mainWindow ?? NSApp.keyWindow else { return 0 }
+
+            return UInt64(truncatingIfNeeded: ObjectIdentifier(window).hashValue)
         }
 
         private static func promptTitle(

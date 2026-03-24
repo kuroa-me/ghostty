@@ -46,8 +46,8 @@ typedef enum {
 } ghostty_clipboard_e;
 
 typedef struct {
-  const char *mime;
-  const char *data;
+  const char* mime;
+  const char* data;
 } ghostty_clipboard_content_s;
 
 typedef enum {
@@ -744,7 +744,7 @@ typedef enum {
 // apprt.action.KeyTable.CValue
 typedef union {
   struct {
-    const char *name;
+    const char* name;
     size_t len;
   } activate;
 } ghostty_action_key_table_u;
@@ -847,6 +847,14 @@ typedef struct {
   ssize_t selected;
 } ghostty_action_search_selected_s;
 
+// apprt.action.BroadcastInput
+typedef enum {
+  GHOSTTY_BROADCAST_INPUT_DISABLE,
+  GHOSTTY_BROADCAST_INPUT_ALL_TABS,
+  GHOSTTY_BROADCAST_INPUT_CURRENT_TAB,
+  GHOSTTY_BROADCAST_INPUT_TOGGLE,
+} ghostty_action_broadcast_input_e;
+
 // terminal.Scrollbar
 typedef struct {
   uint64_t total;
@@ -921,6 +929,7 @@ typedef enum {
   GHOSTTY_ACTION_SEARCH_SELECTED,
   GHOSTTY_ACTION_READONLY,
   GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD,
+  GHOSTTY_ACTION_BROADCAST_INPUT,
 } ghostty_action_tag_e;
 
 typedef union {
@@ -962,6 +971,7 @@ typedef union {
   ghostty_action_search_total_s search_total;
   ghostty_action_search_selected_s search_selected;
   ghostty_action_readonly_e readonly;
+  ghostty_action_broadcast_input_e broadcast_input;
 } ghostty_action_u;
 
 typedef struct {
@@ -978,11 +988,12 @@ typedef void (*ghostty_runtime_confirm_read_clipboard_cb)(
     const char*,
     void*,
     ghostty_clipboard_request_e);
-typedef void (*ghostty_runtime_write_clipboard_cb)(void*,
-                                                   ghostty_clipboard_e,
-                                                   const ghostty_clipboard_content_s*,
-                                                   size_t,
-                                                   bool);
+typedef void (*ghostty_runtime_write_clipboard_cb)(
+    void*,
+    ghostty_clipboard_e,
+    const ghostty_clipboard_content_s*,
+    size_t,
+    bool);
 typedef void (*ghostty_runtime_close_surface_cb)(void*, bool);
 typedef bool (*ghostty_runtime_action_cb)(ghostty_app_t,
                                           ghostty_target_s,
@@ -1006,7 +1017,7 @@ typedef enum {
 } ghostty_ipc_target_tag_e;
 
 typedef union {
-  char *klass;
+  char* klass;
 } ghostty_ipc_target_u;
 
 typedef struct {
@@ -1017,7 +1028,7 @@ typedef struct {
 // apprt.ipc.Action.NewWindow
 typedef struct {
   // This should be a null terminated list of strings.
-  const char **arguments;
+  const char** arguments;
 } ghostty_ipc_action_new_window_s;
 
 typedef union {
@@ -1076,7 +1087,9 @@ ghostty_surface_t ghostty_surface_new(ghostty_app_t,
 void ghostty_surface_free(ghostty_surface_t);
 void* ghostty_surface_userdata(ghostty_surface_t);
 ghostty_app_t ghostty_surface_app(ghostty_surface_t);
-ghostty_surface_config_s ghostty_surface_inherited_config(ghostty_surface_t, ghostty_surface_context_e);
+ghostty_surface_config_s ghostty_surface_inherited_config(
+    ghostty_surface_t,
+    ghostty_surface_context_e);
 void ghostty_surface_update_config(ghostty_surface_t, ghostty_config_t);
 bool ghostty_surface_needs_confirm_quit(ghostty_surface_t);
 bool ghostty_surface_process_exited(ghostty_surface_t);
@@ -1084,6 +1097,8 @@ void ghostty_surface_refresh(ghostty_surface_t);
 void ghostty_surface_draw(ghostty_surface_t);
 void ghostty_surface_set_content_scale(ghostty_surface_t, double, double);
 void ghostty_surface_set_focus(ghostty_surface_t, bool);
+uint64_t ghostty_surface_get_broadcast_domain(ghostty_surface_t);
+void ghostty_surface_set_broadcast_domain(ghostty_surface_t, uint64_t);
 void ghostty_surface_set_occlusion(ghostty_surface_t, bool);
 void ghostty_surface_set_size(ghostty_surface_t, uint32_t, uint32_t);
 ghostty_surface_size_s ghostty_surface_size(ghostty_surface_t);
@@ -1111,7 +1126,11 @@ void ghostty_surface_mouse_scroll(ghostty_surface_t,
                                   double,
                                   ghostty_input_scroll_mods_t);
 void ghostty_surface_mouse_pressure(ghostty_surface_t, uint32_t, double);
-void ghostty_surface_ime_point(ghostty_surface_t, double*, double*, double*, double*);
+void ghostty_surface_ime_point(ghostty_surface_t,
+                               double*,
+                               double*,
+                               double*,
+                               double*);
 void ghostty_surface_request_close(ghostty_surface_t);
 void ghostty_surface_split(ghostty_surface_t, ghostty_action_split_direction_e);
 void ghostty_surface_split_focus(ghostty_surface_t,

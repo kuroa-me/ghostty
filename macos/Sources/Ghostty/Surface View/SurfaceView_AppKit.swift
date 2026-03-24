@@ -142,6 +142,9 @@ extension Ghostty {
         /// True when the surface should show a highlight effect (e.g., when presented via goto_split).
         @Published private(set) var highlighted: Bool = false
 
+        /// True when the surface is currently broadcasting input to other surfaces.
+        @Published private(set) var broadcasting: Bool = false
+
         // An initial size to request for a window. This will only affect
         // then the view is moved to a new window.
         var initialSize: NSSize?
@@ -366,6 +369,11 @@ extension Ghostty {
                 self,
                 selector: #selector(ghosttyDidChangeReadonly(_:)),
                 name: .ghosttyDidChangeReadonly,
+                object: self)
+            center.addObserver(
+                self,
+                selector: #selector(ghosttyDidChangeBroadcasting(_:)),
+                name: .ghosttyDidChangeBroadcasting,
                 object: self)
             center.addObserver(
                 self,
@@ -786,6 +794,11 @@ extension Ghostty {
         @objc private func ghosttyDidChangeReadonly(_ notification: SwiftUI.Notification) {
             guard let value = notification.userInfo?[SwiftUI.Notification.Name.ReadonlyKey] as? Bool else { return }
             readonly = value
+        }
+
+        @objc private func ghosttyDidChangeBroadcasting(_ notification: SwiftUI.Notification) {
+            guard let value = notification.userInfo?[SwiftUI.Notification.Name.BroadcastingKey] as? Bool else { return }
+            broadcasting = value
         }
 
         @objc private func windowDidChangeScreen(notification: SwiftUI.Notification) {

@@ -910,6 +910,10 @@ pub const Surface = struct {
         };
     }
 
+    pub fn broadcastDomainCallback(self: *Surface, domain: u64) void {
+        self.core_surface.setBroadcastDomain(domain);
+    }
+
     pub fn occlusionCallback(self: *Surface, visible: bool) void {
         self.core_surface.occlusionCallback(visible) catch |err| {
             log.err("error in occlusion callback err={}", .{err});
@@ -1730,6 +1734,18 @@ pub const CAPI = struct {
     /// Update the focused state of a surface.
     export fn ghostty_surface_set_focus(surface: *Surface, focused: bool) void {
         surface.focusCallback(focused);
+    }
+
+    /// Update the broadcast domain of a surface.
+    /// A non-zero domain enables broadcasting; 0 disables it.
+    export fn ghostty_surface_set_broadcast_domain(surface: *Surface, domain: u64) void {
+        surface.broadcastDomainCallback(domain);
+    }
+
+    /// Get the broadcast domain for this surface.
+    /// Returns 0 if broadcasting is disabled, non-zero domain ID if enabled.
+    export fn ghostty_surface_get_broadcast_domain(surface: *Surface) u64 {
+        return surface.core_surface.getBroadcastDomain();
     }
 
     /// Update the occlusion state of a surface.

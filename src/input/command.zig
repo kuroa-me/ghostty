@@ -681,6 +681,29 @@ fn actionCommands(action: Action.Key) []const Command {
             .description = "Put a little Ghostty in your terminal.",
         }},
 
+        .broadcast_input => comptime &.{
+            .{
+                .action = .{ .broadcast_input = .disable },
+                .title = "Broadcast Input: Disable",
+                .description = "Send input to focused surface only.",
+            },
+            .{
+                .action = .{ .broadcast_input = .all_tabs },
+                .title = "Broadcast Input: All Tabs",
+                .description = "Toggle broadcast input to all surfaces in all tabs.",
+            },
+            .{
+                .action = .{ .broadcast_input = .current_tab },
+                .title = "Broadcast Input: Current Tab",
+                .description = "Toggle broadcast input to all surfaces in current tab.",
+            },
+            .{
+                .action = .{ .broadcast_input = .toggle },
+                .title = "Broadcast Input: Toggle",
+                .description = "Toggle broadcast input to current surface.",
+            },
+        },
+
         // No commands because they're parameterized and there
         // aren't obvious values users would use. It is possible that
         // these may have commands in the future if there are very

@@ -343,6 +343,9 @@ pub const Action = union(Key) {
     /// otherwise the terminal-set title.
     copy_title_to_clipboard,
 
+    /// Change the broadcast input state, the value can be deterministic or a toggle:
+    broadcast_input: BroadcastInput,
+
     /// Sync with: ghostty_action_tag_e
     pub const Key = enum(c_int) {
         quit,
@@ -410,6 +413,7 @@ pub const Action = union(Key) {
         search_selected,
         readonly,
         copy_title_to_clipboard,
+        broadcast_input,
 
         test "ghostty.h Action.Key" {
             try lib.checkGhosttyHEnum(Key, "GHOSTTY_ACTION_");
@@ -999,6 +1003,22 @@ pub const SearchSelected = struct {
         return .{
             .selected = if (self.selected) |s| @intCast(s) else -1,
         };
+    }
+};
+
+/// Sync with ghostty_action_broadcast_input_e in ghostty.h.
+pub const BroadcastInput = enum(c_int) {
+    /// Send input to focused surface only.
+    disable,
+    /// Toggle broadcast input to all surfaces in all tabs.
+    all_tabs,
+    /// Toggle broadcast input to all surfaces in current tab.
+    current_tab,
+    /// Toggle broadcast input to current surface.
+    toggle,
+
+    test "ghostty.h BroadcastInput" {
+        try lib.checkGhosttyHEnum(BroadcastInput, "GHOSTTY_BROADCAST_INPUT_");
     }
 };
 

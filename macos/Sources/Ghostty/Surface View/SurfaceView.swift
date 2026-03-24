@@ -127,6 +127,11 @@ extension Ghostty {
                         surfaceView.toggleReadonly(nil)
                     }
                 }
+                
+                // Broadcast indicator badge
+                if surfaceView.broadcasting {
+                    BroadcastingBadge(readonly: surfaceView.readonly)
+                }
 
                 // Show key state indicator for active key tables and/or pending key sequences
                 KeyStateIndicator(
@@ -1139,6 +1144,47 @@ extension Ghostty {
             }
             .padding(16)
             .frame(width: 280)
+        }
+    }
+    
+    // MARK: Broadcasting Indicator
+
+    /// Visual indicator showing that this surface is receiving broadcasted input from other surfaces.
+    struct BroadcastingBadge: View {
+        let readonly: Bool
+        
+        private let badgeColor = Color(hue: 0.08, saturation: 0.5, brightness: 0.8)
+        
+        var body: some View {
+            VStack {
+                HStack {
+                    Spacer()
+                    
+                    HStack {
+                        Image(systemName: "dot.radiowaves.forward")
+                            .font(.system(size: 12))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(badgeBackground)
+                    .foregroundStyle(badgeColor)
+                }
+                .padding(.top, readonly ? 40 : 8)
+                .padding(.trailing, 8)
+            
+                Spacer()
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Broadcasting Input")
+        }
+
+        private var badgeBackground: some View {
+            Circle()
+                .fill(.regularMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color.orange.opacity(0.6), lineWidth: 1.5)
+                )
         }
     }
 

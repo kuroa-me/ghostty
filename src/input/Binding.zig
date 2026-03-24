@@ -907,6 +907,25 @@ pub const Action = union(enum) {
     /// this will report performable as false.
     deactivate_all_key_tables,
 
+    /// Change the broadcast input state, the value can be deterministic or a toggle:
+    ///
+    ///   - `disable`
+    ///
+    ///     Send input to focused surface only.
+    ///
+    ///   - `all_tabs`
+    ///
+    ///     Toggle broadcast input to all surfaces in all tabs.
+    ///
+    ///   - `current_tab`
+    ///
+    ///     Toggle broadcast input to all surfaces in current tab.
+    ///
+    ///   - `toggle`
+    ///
+    ///     Toggle broadcast input to current surface.
+    broadcast_input: BroadcastInput,
+
     /// Quit Ghostty.
     quit,
 
@@ -1150,6 +1169,15 @@ pub const Action = union(enum) {
         pub const default: CloseTabMode = .this;
     };
 
+    pub const BroadcastInput = enum {
+        disable,
+        all_tabs,
+        current_tab,
+        toggle,
+
+        pub const default: BroadcastInput = .disable;
+    };
+
     fn parseEnum(comptime T: type, value: []const u8) !T {
         return std.meta.stringToEnum(T, value) orelse return Error.InvalidFormat;
     }
@@ -1368,6 +1396,7 @@ pub const Action = union(enum) {
             .activate_key_table_once,
             .deactivate_key_table,
             .deactivate_all_key_tables,
+            .broadcast_input,
             .end_key_sequence,
             .crash,
             => .surface,
